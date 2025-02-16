@@ -64,14 +64,14 @@ function extinguishCandle() {
     $('#wish_message').fadeIn('slow');
 }
 
-// Modify the light_candle click handler
-$('#light_candle').click(function(){
-    $('.fuego').fadeIn('slow');
-    $(this).fadeOut('slow').delay(3000).promise().done(function(){
-        setupAudioDetection(); 
+// // Modify the light_candle click handler
+// $('#light_candle').click(function(){
+//     $('.fuego').fadeIn('slow');
+//     $(this).fadeOut('slow').delay(3000).promise().done(function(){
+//         setupAudioDetection(); 
        
-    });
-});
+//     });
+// });
 
 
 $(window).on("load", function(){
