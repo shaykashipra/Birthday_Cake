@@ -1,77 +1,3 @@
-let audioContext;
-let meter;
-
-function setupAudioDetection() {
-    try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Request microphone access
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                const mediaStreamSource = audioContext.createMediaStreamSource(stream);
-                meter = createAudioMeter(audioContext);
-                mediaStreamSource.connect(meter);
-                startBlowDetection();
-            })
-            .catch(err => {
-                console.error('Error accessing microphone:', err);
-            });
-    } catch (e) {
-        console.error('Web Audio API not supported:', e);
-    }
-}
-
-function createAudioMeter(audioContext) {
-    const processor = audioContext.createScriptProcessor(512);
-    processor.volume = 0;
-    processor.connect(audioContext.destination);
-    return processor;
-}
-
-function startBlowDetection() {
-    const BLOW_THRESHOLD = 0.1;
-    let blowStart = null;
-    let isBlowing = false;
-
-    meter.onaudioprocess = function(event) {
-        const input = event.inputBuffer.getChannelData(0);
-        let sum = 0;
-        
-        // Calculate volume
-        for (let i = 0; i < input.length; i++) {
-            sum += input[i] * input[i];
-        }
-        const volume = Math.sqrt(sum / input.length);
-        
-        // Detect blow
-        if (volume > BLOW_THRESHOLD && !isBlowing) {
-            isBlowing = true;
-            blowStart = Date.now();
-        } else if (volume > BLOW_THRESHOLD && isBlowing) {
-            if (Date.now() - blowStart > 500) { // Sustained blow for 500ms
-                extinguishCandle();
-                meter.onaudioprocess = null; // Stop listening
-            }
-        } else {
-            isBlowing = false;
-            blowStart = null;
-        }
-    };
-}
-
-function extinguishCandle() {
-    $('.fuego').fadeOut('slow');
-    $('#wish_message').fadeIn('slow');
-}
-
-// // Modify the light_candle click handler
-// $('#light_candle').click(function(){
-//     $('.fuego').fadeIn('slow');
-//     $(this).fadeOut('slow').delay(3000).promise().done(function(){
-//         setupAudioDetection(); 
-       
-//     });
-// });
 
 
 $(window).on("load", function(){
@@ -209,22 +135,57 @@ $('document').ready(function(){
 			$('#light_candle').fadeIn('slow');
 		});
 	});
+	function startListening() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                const audioContext = new AudioContext();
+                const source = audioContext.createMediaStreamSource(stream);
+                const analyser = audioContext.createAnalyser();
 
-	// $('#light_candle').click(function(){
-	// 	$('.fuego').fadeIn('slow');
-	// 	$(this).fadeOut('slow').promise().done(function(){
-	// 		$('#wish_message').fadeIn('slow');
-	// 		startListening(); 
+                source.connect(analyser);
+                analyser.fftSize = 2048; // Adjust for sensitivity
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Float32Array(bufferLength);
 
-	// 	});
-	// });
+                let blowDetected = false; // Initialize blowDetected
+                let threshold = -0.7; // Adjust this threshold - Start with -0.7 and adjust as needed
+
+                function detectBlow() {
+                    analyser.getFloatTimeDomainData(dataArray);
+
+                    let currentVolume = 0; // Calculate current volume
+                    for (let i = 0; i < bufferLength; i++) {
+                        currentVolume += Math.abs(dataArray[i]); // Sum absolute values
+                    }
+                    currentVolume /= bufferLength; // Average the absolute values
+
+                    // Detect blow based on a sudden increase in volume
+                    if (currentVolume > threshold && !blowDetected) {
+                        blowDetected = true;
+                        $('.fuego').fadeOut('slow'); // Blow out the candles!
+                        console.log("Blow Detected!"); // For debugging
+                    } else if (currentVolume < threshold/2) { // Reset blowDetected when volume drops
+                        blowDetected = false;
+                    }
+                    console.log("Current Volume:" + currentVolume); // For debugging
+
+                    requestAnimationFrame(detectBlow); // Check continuously
+                }
+
+                detectBlow(); // Start the detection loop
+
+            })
+            .catch(err => console.error('Error accessing microphone:', err));
+    }
 	$('#light_candle').click(function(){
-		$('.fuego').fadeIn('slow'); 
-		$(this).fadeOut('slow').delay(3000).promise().done(function(){
+		$('.fuego').fadeIn('slow');
+		$(this).fadeOut('slow').promise().done(function(){
 			$('#wish_message').fadeIn('slow');
-			
+			startListening(); 
+
 		});
 	});
+	
 		
 	$('#wish_message').click(function(){
 		 vw = $(window).width()/2;
