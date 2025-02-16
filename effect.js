@@ -146,33 +146,43 @@ $('document').ready(function(){
                 analyser.fftSize = 2048; // Adjust for sensitivity
                 const bufferLength = analyser.frequencyBinCount;
                 const dataArray = new Float32Array(bufferLength);
+         let blowDetected=false;
+        let threshold = 200.0; // Initial threshold (adjust as needed)
 
-                let blowDetected = false; // Initialize blowDetected
-                let threshold = -0.7; // Adjust this threshold - Start with -0.7 and adjust as needed
+function detectBlow() {
+    analyser.getFloatTimeDomainData(dataArray);
 
-                function detectBlow() {
-                    analyser.getFloatTimeDomainData(dataArray);
+    let currentVolume = 0;
+    for (let i = 0; i < bufferLength; i++) {
+        currentVolume += Math.abs(dataArray[i]);
+    }
+    currentVolume /= bufferLength;
 
-                    let currentVolume = 0; // Calculate current volume
-                    for (let i = 0; i < bufferLength; i++) {
-                        currentVolume += Math.abs(dataArray[i]); // Sum absolute values
-                    }
-                    currentVolume /= bufferLength; // Average the absolute values
+    // Dynamic Threshold Adjustment:
+    const ambientNoiseLevel = calculateAmbientNoise(dataArray); // Function to calculate ambient noise
+    threshold =  -0.1- (ambientNoiseLevel * 0.4); // Adjust threshold based on ambient noise
 
-                    // Detect blow based on a sudden increase in volume
-                    if (currentVolume > threshold && !blowDetected) {
-                        blowDetected = true;
-                        $('.fuego').fadeOut('slow'); // Blow out the candles!
-                        console.log("Blow Detected!"); // For debugging
-                    } else if (currentVolume < threshold/2) { // Reset blowDetected when volume drops
-                        blowDetected = false;
-                    }
-                    console.log("Current Volume:" + currentVolume); // For debugging
+    if (currentVolume > threshold && !blowDetected) {
+        blowDetected = true;
+        $('.fuego').fadeOut('slow'); // Blow out the candles!
+        console.log("Blow Detected!");
+    } else if (currentVolume < threshold / 2) { // Reset blowDetected when volume drops
+        blowDetected = false;
+    }
+    console.log("Current Volume:" + currentVolume + ", Threshold: " + threshold + ", Ambient: " + ambientNoiseLevel);
 
-                    requestAnimationFrame(detectBlow); // Check continuously
-                }
+    requestAnimationFrame(detectBlow);
+}
 
-                detectBlow(); // Start the detection loop
+function calculateAmbientNoise(dataArray) {
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+        sum += Math.abs(dataArray[i]);
+    }
+    return sum / dataArray.length;
+}
+
+                detectBlow();
 
             })
             .catch(err => console.error('Error accessing microphone:', err));
