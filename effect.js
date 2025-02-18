@@ -160,7 +160,7 @@ function detectBlow() {
 
     // Dynamic Threshold Adjustment:
     const ambientNoiseLevel = calculateAmbientNoise(dataArray); // Function to calculate ambient noise
-    threshold =  -0.1- (ambientNoiseLevel * 0.4); // Adjust threshold based on ambient noise
+    threshold =  1.0- (ambientNoiseLevel * 0.4); // Adjust threshold based on ambient noise
 
     if (currentVolume > threshold && !blowDetected) {
         blowDetected = true;
